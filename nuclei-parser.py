@@ -16,7 +16,7 @@ severity_order = {
 
 def severity_key(issue):
     severity = issue.get('info', {}).get('severity', 'unknown').lower()
-    return severity_order.get(severity, severity_order['unknown'])
+    return severity_order.get(severity, severity_order['unknown']), issue.get('template-id', '').lower()
 
 
 def generate_html(issue_obj, filename='output.html'):
@@ -95,7 +95,7 @@ def main():
 
     if args.severity:
         severities = args.severity.split(',')
-        severities = [s.strip() for s in severities]
+        severities = [s.strip().lower() for s in severities]
     else:
         severities = []
 
@@ -117,31 +117,20 @@ def main():
 
     # Фильтрация по критичности
     if severities:
-        filtered_issues = [issue for issue in issues if issue.get('info', {}).get('severity') in severities]
+        filtered_issues = [issue for issue in issues if issue.get('info', {}).get('severity', 'unknown').lower() in severities]
         print(f"Filtered issues: {len(filtered_issues)} with severities {', '.join(severities)}")
     else:
         filtered_issues = issues
 
-    # Сортировка по критичности
+    # Сортировка по критичности и названию шаблона
     sorted_issues = sorted(filtered_issues, key=severity_key)
 
-    # Проверка наличия ключа 'matched-at' и соответствия
     if sorted_issues:
-        matched_at = sorted_issues[0].get('matched-at')
-        if matched_at:
-            # Проверка наличия параметра --html
-            if args.html:
-                generate_html(sorted_issues)
-                print("HTML generated")
-            else:
-                print_table(sorted_issues)
+        if args.html:
+            generate_html(sorted_issues)
+            print("HTML generated")
         else:
-            error_message = {"error": "Key 'matched-at' not found"}
-            if args.html:
-                generate_html([error_message])
-                print("HTML generated")
-            else:
-                print_table([error_message])
+            print_table(sorted_issues)
     else:
         print("No data matching the specified severity.", file=sys.stderr)
 
